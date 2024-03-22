@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Canvas Image Click Coordinates</title>
+<style>
+    canvas {
+        border: 1px solid black;
+    }
+
+    #controls {
+        display: inline-block;
+        vertical-align: top;
+    }
+
+    input, button { display: block; margin-bottom: 5px;}
+</style>
+</head>
+<body>
+<canvas id="canvas" width="640" height="640"></canvas>
+<div id="controls">
+    zoom<input type="range" value="1" min="1" max="3" step="0.1" onchange="zoomScale = this.value;">
+    <button onclick="deleteLastShape()">delete last</button>
+    <button onclick="exportShapes()">EXPORT</button>
+</div>
+<input type="file" id="fileInput" accept="image/jpeg" onchange="loadImage()">
+
+
+
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let img = new Image();
+    let background = null;
+
+    // top left corner of canvas in canvas frame
+    let translateX = 0;
+    let translateY = 0;
+
+    // Cursor position in canvas frame
+    let cursorX = 0;
+    let cursorY = 0;
+
+    let zoomScale = 1;
+    let filename = "";
+    const fps = 30;
+
+    function loadImage() {
+        const fileInput = document.getElementById('fileInput');
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        filename = fileInput.files[0].name;
+
+        reader.onload = function(event) {
+            img.onload = function() {
+                background = img;
+            }
+            img.src = event.target.result;
+        }
+
+        if (file) {
+            reader.readAsDataURL(file);
+        }
+    }
+
+    // DRAW
+    function draw(){
+        if (background == null) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.save();
+
+        if (zoomScale != 1) {
+            ctx.scale(zoomScale, zoomScale);
+            ctx.translate(-translateX, -translateY);
+        }
+
+        ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "#00FF0050";
+        ctx.strokeStyle = "#FF0000";
+        for (const shape of shapes) {
+            ctx.beginPath();
+            ctx.moveTo(shape[0].x, shape[0].y)
+            for (const point of shape.slice(1)) {
+                ctx.lineTo(point.x, point.y);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        }
+
+        for (const point of currentShape){
+            ctx.beginPath();
+            ctx.moveTo(point.x-3, point.y-3);
+            ctx.lineTo(point.x+3, point.y+3);
+            ctx.closePath();
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(point.x+3, point.y-3);
+            ctx.lineTo(point.x-3, point.y+3);
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        ctx.restore();
+    }
+    setInterval(draw, 1000/fps);
+
+    shapes = []
+    currentShape = []
+    canvas.addEventListener('click', function(event) {
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+
+        currentShape.push({'x': cursorX, 'y': cursorY})
+        if( currentShape.length == 4){
+            shapes.push(currentShape)
+            currentShape = []
+        }
+    });
+
+   
+    function move(event){
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+
+        alpha = 0.3; //limit of edges
+        let zoomX = Math.max(Math.min(x + alpha*(x - canvas.width/2), canvas.width), 0);
+        let zoomY = Math.max(Math.min(y + alpha*(y - canvas.height/2), canvas.height), 0);
+
+        translateX = zoomX* (1-1/zoomScale);
+        translateY = zoomY*(1-1/zoomScale);
+
+        cursorX = x/zoomScale + translateX;
+        cursorY = y/zoomScale + translateY;
+    }
+    canvas.addEventListener('mousemove', event => move(event));
+
+    canvas.addEventListener('wheel', function(event) {
+        intensity = Math.sign(event.deltaY)/10;
+        zoomScale = Math.max(1, Math.min(zoomScale - intensity, 5));
+
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+
+        move(event);
+    });
+
+
+
+
+    // FUNCTIONS:
+    
+    function deleteLastShape(){
+        shapes.pop();
+    }
+
+    function exportShapes(){
+        res = "";
+        for (shape of shapes){
+            res += '0';
+            for (point of shape){
+                res += ` ${point.x/canvas.width} ${point.y/canvas.height}`;
+            }
+            res += '\n';
+        }
+        downloadFile(res, filename.split(".jpg")[0] + ".txt");
+    }
+
+    function importShapes(str){
+        
+    }
+
+    function downloadFile(content, filename) {
+        const blob = new Blob([content], { type: 'text/plain' });
+        const link = document.createElement('a');
+        link.href = window.URL.createObjectURL(blob);
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>
+</body>
+</html>
