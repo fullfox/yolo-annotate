@@ -46,6 +46,8 @@
     let filename = "";
     const fps = 30;
 
+    let static = false;
+
     function loadImage() {
         const fileInput = document.getElementById('fileInput');
         const file = fileInput.files[0];
@@ -127,12 +129,14 @@
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
 
-        alpha = 0.3; //limit of edges
-        let zoomX = Math.max(Math.min(x + alpha*(x - canvas.width/2), canvas.width), 0);
-        let zoomY = Math.max(Math.min(y + alpha*(y - canvas.height/2), canvas.height), 0);
+        if(!static) {
+            alpha = 0.3; //limit of edges
+            let zoomX = Math.max(Math.min(x + alpha*(x - canvas.width/2), canvas.width), 0);
+            let zoomY = Math.max(Math.min(y + alpha*(y - canvas.height/2), canvas.height), 0);
 
-        translateX = zoomX* (1-1/zoomScale);
-        translateY = zoomY*(1-1/zoomScale);
+            translateX = zoomX* (1-1/zoomScale);
+            translateY = zoomY*(1-1/zoomScale);
+        }
 
         cursorX = x/zoomScale + translateX;
         cursorY = y/zoomScale + translateY;
@@ -150,7 +154,11 @@
         move(event);
     });
 
-
+    document.body.addEventListener('keydown', function(event) {
+        if (event.keyCode === 67) {
+            static = !static;
+        }
+    });
 
 
     // FUNCTIONS:
