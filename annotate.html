@@ -14,13 +14,41 @@
         vertical-align: top;
     }
 
+    .slider {
+        vertical-align: middle;
+        display: inline-block;
+        -webkit-appearance: none;
+        width: 100px;
+        height: 25px;
+        background: #d3d3d3;
+        outline: none;
+        opacity: 0.7;
+        -webkit-transition: .2s;
+        transition: opacity .2s;
+    }
+
+    .slider:hover {
+        opacity: 1;
+    }
+
+    .slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 25px;
+        height: 25px;
+        background: #04AA6D;
+        cursor: pointer;
+    }
+
     input, button { display: block; margin-bottom: 5px;}
 </style>
 </head>
 <body>
+    <p>press 'C' to pause image</p>
 <canvas id="canvas" width="640" height="640"></canvas>
 <div id="controls">
     zoom<input type="range" value="1" min="1" max="3" step="0.1" onchange="zoomScale = this.value;">
+    label<input type="range" min="0" max="1" value="0" class="slider" id="labelTypeSlider" onchange="updateLabelType(this)"><span id="labelType">0</span>
     <button onclick="deleteLastShape()">delete last</button>
     <button onclick="exportShapes()">EXPORT</button>
 </div>
@@ -34,6 +62,8 @@
     let img = new Image();
     let background = null;
 
+    let fillStyles = ["#00FF0050", "#ff00fb50"];
+
     // top left corner of canvas in canvas frame
     let translateX = 0;
     let translateY = 0;
@@ -45,6 +75,12 @@
     let zoomScale = 1;
     let filename = "";
     const fps = 30;
+
+    let labelType = 0;
+    function updateLabelType(slider){
+        labelType = slider.value;
+        document.getElementById("labelType").innerHTML = labelType;
+    }
 
     let static = false;
 
@@ -79,9 +115,11 @@
 
         ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
 
-        ctx.fillStyle = "#00FF0050";
         ctx.strokeStyle = "#FF0000";
         for (const shape of shapes) {
+            ctx.fillStyle = fillStyles[shape[0].label];
+            
+
             ctx.beginPath();
             ctx.moveTo(shape[0].x, shape[0].y)
             for (const point of shape.slice(1)) {
@@ -92,6 +130,7 @@
             ctx.stroke();
         }
 
+        ctx.strokeStyle = "#00FF00";
         for (const point of currentShape){
             ctx.beginPath();
             ctx.moveTo(point.x-3, point.y-3);
@@ -116,7 +155,7 @@
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
 
-        currentShape.push({'x': cursorX, 'y': cursorY})
+        currentShape.push({'x': cursorX, 'y': cursorY, 'label':labelType})
         if( currentShape.length == 4){
             shapes.push(currentShape)
             currentShape = []
@@ -170,7 +209,7 @@
     function exportShapes(){
         res = "";
         for (shape of shapes){
-            res += '0';
+            res += shape[0].label;
             for (point of shape){
                 res += ` ${point.x/canvas.width} ${point.y/canvas.height}`;
             }
